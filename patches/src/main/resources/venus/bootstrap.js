@@ -1130,13 +1130,28 @@ function autoTranslateMessage(message) {
                 "transparent";
 
             const addChannel = () => {
-                const id = String(channelId || "").trim();
+                const input = String(channelId || "").trim();
+
+                let id = input;
+
+                const linkMatch = input.match(
+                    /(?:https?:\/\/)?(?:canary\.|ptb\.)?discord(?:app)?\.com\/channels\/(?:\d+|@me)\/(\d+)(?:[/?#].*)?$/
+                );
+
+                if (linkMatch) {
+                    id = linkMatch[1];
+                }
+
+                const mentionMatch = id.match(/^<#(\d+)>$/);
+                if (mentionMatch) {
+                    id = mentionMatch[1];
+                }
 
                 if (!/^\d{15,25}$/.test(id)) {
                     try {
                         RN.Alert.alert(
-                            "Invalid channel ID",
-                            "Enter a valid Discord channel ID."
+                            "Invalid channel ID or link",
+                            "Enter a valid Discord channel ID or Discord channel link."
                         );
                     } catch (_) {}
                     return;
@@ -1189,11 +1204,11 @@ function autoTranslateMessage(message) {
                         {
                             style: {
                                 fontSize: 14,
-                                color: mutedColor,
+                                color: textColor,
                                 marginBottom: 10
                             }
                         },
-                        "Add a Discord channel ID. New messages in configured channels are automatically translated."
+                        "Add a Discord channel ID or channel link. New messages in configured channels are automatically translated."
                     ),
 
                     el(
@@ -1201,8 +1216,7 @@ function autoTranslateMessage(message) {
                         {
                             value: channelId,
                             onChangeText: setChannelId,
-                            placeholder: "Channel ID",
-                            keyboardType: "numeric",
+                            placeholder: "Channel ID or Discord link",
                             style: {
                                 borderWidth: 1,
                                 borderColor,
@@ -3144,7 +3158,7 @@ function autoTranslateMessage(message) {
     
         if (translated && autoTranslateRule(channelId)) {
             message = Object.assign({}, message, {
-                content: translated.text + "\n\n\n" + translated.original
+                content: "Translated:\n" + translated.text + "\n\n\nOriginal:\n" + translated.original
             });
     
             next = Object.assign({}, next, {
