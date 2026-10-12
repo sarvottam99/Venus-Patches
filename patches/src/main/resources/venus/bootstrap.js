@@ -123,7 +123,7 @@ function autoTranslateLanguageName(code) {
             "&dt=t" +
             "&q=" + encodeURIComponent(text);
     
-        const response = await fetch(url);
+        const request = global["fetch"]; if (typeof request !== "function") throw new Error("Network API unavailable"); const response = await request(url);
     
         if (!response.ok)
             throw new Error("Google Translate HTTP " + response.status);
@@ -151,7 +151,7 @@ function autoTranslateLanguageName(code) {
             "&langpair=" +
             encodeURIComponent(from + "|" + to);
     
-        const response = await fetch(url);
+        const request = global["fetch"]; if (typeof request !== "function") throw new Error("Network API unavailable"); const response = await request(url);
     
         if (!response.ok)
             throw new Error("MyMemory HTTP " + response.status);
