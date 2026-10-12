@@ -188,8 +188,15 @@ function autoTranslateRepaint(channelId, messageId) {
     if (!cached) return;
 
     try {
-        if (msgStore && typeof msgStore.emitChange === "function") {
-            msgStore.emitChange();
+        if (typeof dispatcher === "function") {
+            dispatcher({
+                type: "MESSAGE_UPDATE",
+                message: {
+                    id: String(messageId),
+                    channel_id: String(channelId),
+                    content: cached.original
+                }
+            });
         }
     } catch (_) {}
 }
