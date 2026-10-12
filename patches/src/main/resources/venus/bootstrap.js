@@ -409,14 +409,14 @@ function autoTranslateMessage(message) {
                         };
                     }
                 }
-            }
 
-            const auth = loaded.reviewAuth;
-            // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
-            if (features.reviewDB && !reviewToken && auth && typeof auth.token === "string" && auth.token.length <= 8192 &&
-                typeof auth.account === "string" && /^\d{17,20}$/.test(auth.account)) {
-                reviewToken = auth.token;
-                reviewAccount = auth.account;
+                const auth = loaded.reviewAuth;
+                // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
+                if (features.reviewDB && !reviewToken && auth && typeof auth.token === "string" && auth.token.length <= 8192 &&
+                    typeof auth.account === "string" && /^\d{17,20}$/.test(auth.account)) {
+                    reviewToken = auth.token;
+                    reviewAccount = auth.account;
+                }
             }
             status.storage = "ready";
             fontInUse = settings.systemFont;
