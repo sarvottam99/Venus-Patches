@@ -194,7 +194,7 @@ function autoTranslateRepaint(channelId, messageId) {
                 message: {
                     id: String(messageId),
                     channel_id: String(channelId),
-                    content: cached.original
+                    content: cached.text
                 }
             });
         }
