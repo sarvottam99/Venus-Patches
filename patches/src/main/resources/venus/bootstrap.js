@@ -394,56 +394,30 @@ function autoTranslateMessage(message) {
                         (key !== "gestureOwn" || GESTURE_OWN_MODES.includes(loaded[key])))
                         settings[key] = key === "noDeleteLimit" ? deleteLimit(loaded[key]) : loaded[key];
                 if (features.autoTranslate && loaded.autoTranslateChannels &&
-                typeof loaded.autoTranslateChannels === "object" &&
-                !Array.isArray(loaded.autoTranslateChannels)) {
-            
-                for (const channelId of Object.keys(loaded.autoTranslateChannels)) {
-                    const rule = loaded.autoTranslateChannels[channelId];
-            
-                    if (!rule || typeof rule !== "object") continue;
-            
-                    if (typeof rule.from !== "string" ||
-                        typeof rule.to !== "string") {
-                        continue;
+                    typeof loaded.autoTranslateChannels === "object" &&
+                    !Array.isArray(loaded.autoTranslateChannels)) {
+                    for (const channelId of Object.keys(loaded.autoTranslateChannels)) {
+                        const rule = loaded.autoTranslateChannels[channelId];
+                        if (!rule || typeof rule !== "object") continue;
+                        const from = typeof rule.from === "string" ? rule.from : "";
+                        const to = typeof rule.to === "string" ? rule.to : "";
+                        if (!from || !to || from === to) continue;
+                        autoTranslateChannels[channelId] = {
+                            enabled: rule.enabled !== false,
+                            from,
+                            to
+                        };
                     }
-            
-                    autoTranslateChannels[channelId] = {
-                        enabled: rule.enabled !== false,
-                        from: rule.from,
-                        to: rule.to
-                    };
                 }
             }
 
-            if (features.autoTranslate && loaded.autoTranslateChannels &&
-                typeof loaded.autoTranslateChannels === "object" &&
-                !Array.isArray(loaded.autoTranslateChannels)) {
-            
-                for (const channelId of Object.keys(loaded.autoTranslateChannels)) {
-                    const rule = loaded.autoTranslateChannels[channelId];
-            
-                    if (!rule || typeof rule !== "object") continue;
-            
-                    if (typeof rule.from !== "string" ||
-                        typeof rule.to !== "string") {
-                        continue;
-                    }
-            
-                    autoTranslateChannels[channelId] = {
-                        enabled: rule.enabled !== false,
-                        from: rule.from,
-                        to: rule.to
-                    };
-                }
-            }
-            
             const auth = loaded.reviewAuth;
             // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
             if (features.reviewDB && !reviewToken && auth && typeof auth.token === "string" && auth.token.length <= 8192 &&
                 typeof auth.account === "string" && /^\d{17,20}$/.test(auth.account)) {
                 reviewToken = auth.token;
                 reviewAccount = auth.account;
-                        }
+            }
             status.storage = "ready";
             fontInUse = settings.systemFont;
             emojiInUse = settings.systemEmoji;
