@@ -392,10 +392,34 @@ function autoTranslateMessage(message) {
                     if (!dirty.has(key) && typeof loaded[key] === typeof settings[key] && (key !== "readAllMode" || READ_ALL_MODES.includes(loaded[key])) &&
                         (key !== "gestureOwn" || GESTURE_OWN_MODES.includes(loaded[key])))
                         settings[key] = key === "noDeleteLimit" ? deleteLimit(loaded[key]) : loaded[key];
-                const auth = loaded.reviewAuth;
-                // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
-                if (features.reviewDB && !reviewToken && auth && typeof auth.token === "string" && auth.token.length <= 8192 &&
-                    typeof auth.account === "string" && /^\d{17,20}$/.test(auth.account)) { reviewToken = auth.token; reviewAccount = auth.account; }
+                if (features.autoTranslate && loaded.autoTranslateChannels &&
+                typeof loaded.autoTranslateChannels === "object" &&
+                !Array.isArray(loaded.autoTranslateChannels)) {
+            
+                for (const channelId of Object.keys(loaded.autoTranslateChannels)) {
+                    const rule = loaded.autoTranslateChannels[channelId];
+            
+                    if (!rule || typeof rule !== "object") continue;
+            
+                    if (typeof rule.from !== "string" ||
+                        typeof rule.to !== "string") {
+                        continue;
+                    }
+            
+                    autoTranslateChannels[channelId] = {
+                        enabled: rule.enabled !== false,
+                        from: rule.from,
+                        to: rule.to
+                    };
+                }
+            }
+
+            const auth = loaded.reviewAuth;
+            // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
+            if (features.reviewDB && !reviewToken && auth && typeof auth.token === "string" && auth.token.length <= 8192 &&
+                typeof auth.account === "string" && /^\d{17,20}$/.test(auth.account)) {
+                reviewToken = auth.token;
+                reviewAccount = auth.account;
             }
             status.storage = "ready";
             fontInUse = settings.systemFont;
