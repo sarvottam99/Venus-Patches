@@ -50,9 +50,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Publish release
-          uses: softprops/action-gh-release@v2
-          with:
-            tag_name: v1.8.2
-            name: Venus Patches v1.8.2
-            files: patches/build/libs/patches-1.8.2.mpp
-            generate_release_notes: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.8.2
+          name: Venus Patches v1.8.2
+          files: patches/build/libs/patches-1.8.2.mpp
+          generate_release_notes: true
