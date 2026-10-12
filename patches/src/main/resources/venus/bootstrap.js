@@ -1160,7 +1160,7 @@ function autoTranslateMessage(message) {
                 if (!autoTranslateChannels[id]) {
                     autoTranslateChannels[id] = {
                         enabled: true,
-                        from: "es",
+                        from: "auto",
                         to: "en"
                     };
                 }
@@ -1184,6 +1184,7 @@ function autoTranslateMessage(message) {
                         flex: 1,
                         backgroundColor
                     },
+                    keyboardShouldPersistTaps: "handled",
                     contentContainerStyle: {
                         paddingBottom: 32
                     }
