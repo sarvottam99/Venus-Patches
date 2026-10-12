@@ -288,7 +288,20 @@ function autoTranslateMessage(message) {
     // Emojis are the same: the native side reads the saved setting once at launch, and so does this.
     let emojiInUse = true;
     function settingsSnapshot() {
-        return JSON.stringify(features.reviewDB && reviewToken && reviewAccount ? Object.assign({}, settings, {reviewAuth:{account:reviewAccount, token:reviewToken}}) : settings);
+        const snapshot = features.reviewDB && reviewToken && reviewAccount
+            ? Object.assign({}, settings, {
+                reviewAuth: {
+                    account: reviewAccount,
+                    token: reviewToken
+                }
+            })
+            : Object.assign({}, settings);
+    
+        if (features.autoTranslate) {
+            snapshot.autoTranslateChannels = autoTranslateChannels;
+        }
+    
+        return JSON.stringify(snapshot);
     }
     function save() {
         if (!files || status.storage === "loading") return;
@@ -1430,6 +1443,9 @@ function autoTranslateMessage(message) {
     function dispatchEvent(orig, self, args) {
         const event = args[0];
         if (!event) return orig.apply(self, args);
+        if (features.autoTranslate && event.type === "MESSAGE_CREATE") {
+        autoTranslateMessage(event.message || event);
+            }
         if (features.hiddenChannels) channelMetadataEvent(event);
         if (event.type === "LOGOUT") { clearDeleted(false); edits.clear(); archiveRestored = false; clearReviewAuth(); }
         if (features.noDelete && RESTORE_EVENTS.has(event.type)) Promise.resolve().then(restoreDeleted);
@@ -2676,6 +2692,21 @@ function autoTranslateMessage(message) {
         const source = row.message || message;
         const channelId = source.channel_id || source.channelId || message.channelId;
         const id = source.id || message.id;
+        if (features.autoTranslate && channelId && id) {
+    const translated = autoTranslateCache.get(
+            autoTranslateCacheKey(channelId, id)
+        );
+    
+        if (translated && autoTranslateRule(channelId)) {
+            message = Object.assign({}, message, {
+                content: translated.text
+            });
+    
+            next = Object.assign({}, next, {
+                message
+            });
+        }
+            }
         if (edits.size && enabled("noDelete")) {
             const shown = withEditHistory(next.message, channelId, id);
             if (shown !== next.message) next = Object.assign({},next,{message:shown});
@@ -3428,7 +3459,11 @@ function autoTranslateMessage(message) {
         // MurmurHashV3 is CommonJS (module.exports=function), not an ES default export.
         if (features.pastelize && id === 1252) pastelHash = typeof exports === "function" ? exports : exports.default;
         if (features.pastelize && id === 2111) guildMembers = exports.default;
-        if ((features.pastelize || features.noDelete) && id === 7378 && exports.default && exports.default.prototype) hookExport(exports.default.prototype,"generate",messageRow);
+        if ((features.pastelize || features.noDelete || features.autoTranslate) &&
+            id === 7378 &&
+            exports.default &&
+            exports.default.prototype)
+            hookExport(exports.default.prototype, "generate", messageRow);
         if (features.platformIndicators && id === 4877) presenceStore = exports.default;
         if (features.platformIndicators && id === 4855) sessionsStore = exports.default;
         if (features.platformIndicators && id === 10603) {
@@ -3511,10 +3546,10 @@ function autoTranslateMessage(message) {
         }
         if (features.quests && id === 7120) questAttach(exports.default);
         if (features.quests && id === 585) questsInit(exports.default);
-        if ((features.noDelete || features.reviewDB || features.hiddenChannels) && id === 585) {
-            dispatcher = exports.default.dispatch.bind(exports.default);
-            return replaceValue(exports, "default", hookExport(exports.default, "dispatch", dispatchEvent));
-        }
+        if ((features.noDelete || features.reviewDB || features.hiddenChannels || features.autoTranslate) && id === 585) {
+        dispatcher = exports.default.dispatch.bind(exports.default);
+        return replaceValue(exports, "default", hookExport(exports.default, "dispatch", dispatchEvent));
+            }
         if (features.hiddenChannels && [1086,1097].includes(id) && exports.Permissions) viewPermission = exports.Permissions.VIEW_CHANNEL;
         if (features.hiddenChannels && id === 1113) {
             exports = hookExport(exports, "transitionTo", hiddenNavigation);
