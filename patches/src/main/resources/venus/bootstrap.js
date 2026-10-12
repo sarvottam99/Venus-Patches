@@ -1231,6 +1231,7 @@ function autoTranslateMessage(message) {
         toggle("chat", "picker", "Show file sizes when attaching", "Shows each photo and video's size in the attachment picker.");
         toggle("chat", "favouriteAnything", "Favourite any image or video", "Adds the favourite star to any image or video in the media viewer, like GIFs.");
         toggle("chat", "hideGift", "Hide the gift button", "Removes the Nitro gift button next to the message box.");
+        withOptions("chat", "autoTranslate", "VENUS_AUTOTRANSLATE", "Automatically translate messages by channel", "Choose a channel and fixed FROM/TO languages for automatic translation.", "Auto-translate", AutoTranslateSettings);
         withOptions("chat", "gestures", "VENUS_GESTURES", "Double-tap a message to reply", "Your own messages open for editing, and three taps delete them. Double-tap no longer reacts.", "Message tap gestures", GestureSettings);
         withOptions("people", "pastelize", "VENUS_PASTELIZE", "Give names soft pastel colors", "Names and mentions without a role color get a color picked from their user ID, so each person always has the same one.", "Pastel names",
             () => [section("Options", [option("pastelAll", "Color every name", "Also replace role colors with each person's pastel color.", "VENUS_PASTELIZE"),
