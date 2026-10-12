@@ -6,6 +6,10 @@
     // Inspected Metro IDs for the SHA-256-pinned 348.10 bundle; never scan or eagerly require modules.
     const targetModules = new Set([17, 19, 1163, 10874, 14130, 14236]);
     function selectModules(ids) { ids.forEach(id => targetModules.add(id)); }
+
+    if (features.autoTranslate) {
+        selectModules([585, 7378]);
+    }
     if (features.picker) selectModules([414]);
     if (features.voice) selectModules([1283, 5440, 5442]);
     if (features.copyBios) selectModules([10742]);
@@ -32,7 +36,7 @@
     // Defer every feature hook until that initializer returns successfully.
     let environmentReady = false;
     const deferred = new Map();
-    const settings = { picker: true, voice: false, copyBios: true, dashless: true, favouriteAnything: true, freeNitro: true, emojis: true, stickers: true, hyperlinks: true, forceLinks: false,
+    const settings = { picker: true, voice: false, copyBios: true, dashless: true, favouriteAnything: true, freeNitro: true, autoTranslate: true, emojis: true, stickers: true, hyperlinks: true, forceLinks: false,
         noTyping: true, quickDelete: false, quickDeleteEmbeds: false, noDelete: false, noDeleteSave: false, noDeleteLimit: 512, noDeleteEdits: true,
         jumpToTop: true, hiddenChannels: false, pastelize:true, pastelAll:false, pastelWebhookName:true, pastelContent:false, platformIndicators:true, piDmHeader:true, piUserList:true, piProfile:true, piHideMobile:true, reviewDB:false, reviewThemedSend:true, reviewWarning:true, readAll:true, readAllMode:"guilds",
         quests:false, questsVideo:true, questsPlay:true, questsActivity:true, questsEnroll:true, systemFont:false,
@@ -57,6 +61,205 @@
     const READ_ALL_MODES = ["guilds", "dms", "both"];
     // What double-tapping your own message does: edit it, or reply like anyone else's.
     const GESTURE_OWN_MODES = ["edit", "reply"];
+    // Per-channel automatic translation rules.
+    // channelId -> { enabled, from, to }
+    const autoTranslateChannels = Object.create(null);
+    
+    const AUTO_TRANSLATE_LANGUAGES = [
+        ["en", "English"],
+        ["es", "Spanish"],
+        ["fr", "French"],
+        ["de", "German"],
+        ["it", "Italian"],
+        ["pt", "Portuguese"],
+        ["ru", "Russian"],
+        ["uk", "Ukrainian"],
+        ["tr", "Turkish"],
+        ["ar", "Arabic"],
+        ["hi", "Hindi"],
+        ["bn", "Bengali"],
+        ["ta", "Tamil"],
+        ["te", "Telugu"],
+        ["ja", "Japanese"],
+        ["ko", "Korean"],
+        ["zh-CN", "Chinese (Simplified)"],
+        ["zh-TW", "Chinese (Traditional)"],
+        ["nl", "Dutch"],
+        ["pl", "Polish"],
+        ["sv", "Swedish"],
+        ["da", "Danish"],
+        ["fi", "Finnish"],
+        ["cs", "Czech"],
+        ["ro", "Romanian"],
+        ["el", "Greek"],
+        ["he", "Hebrew"],
+        ["id", "Indonesian"],
+        ["vi", "Vietnamese"],
+        ["th", "Thai"]
+    ];
+
+function autoTranslateLanguageName(code) {
+        const found = AUTO_TRANSLATE_LANGUAGES.find(item => item[0] === code);
+        return found ? found[1] : code;
+    }
+    
+    function autoTranslateRule(channelId) {
+        if (!channelId) return null;
+        const rule = autoTranslateChannels[String(channelId)];
+        if (!rule || rule.enabled === false) return null;
+        if (!rule.from || !rule.to || rule.from === rule.to) return null;
+        return rule;
+    }
+
+    const autoTranslateCache = new Map();
+    const autoTranslatePending = new Map();
+    
+    async function autoTranslateGoogle(text, from, to) {
+        const url =
+            "https://translate.googleapis.com/translate_a/single" +
+            "?client=gtx" +
+            "&sl=" + encodeURIComponent(from) +
+            "&tl=" + encodeURIComponent(to) +
+            "&dt=t" +
+            "&q=" + encodeURIComponent(text);
+    
+        const response = await fetch(url);
+    
+        if (!response.ok)
+            throw new Error("Google Translate HTTP " + response.status);
+    
+        const data = await response.json();
+    
+        if (!Array.isArray(data) || !Array.isArray(data[0]))
+            throw new Error("Invalid Google Translate response");
+    
+        const translated = data[0]
+            .map(part => Array.isArray(part) ? part[0] : "")
+            .filter(Boolean)
+            .join("");
+    
+        if (!translated)
+            throw new Error("Empty translation");
+    
+        return translated;
+    }
+    
+    async function autoTranslateMyMemory(text, from, to) {
+        const url =
+            "https://api.mymemory.translated.net/get?q=" +
+            encodeURIComponent(text) +
+            "&langpair=" +
+            encodeURIComponent(from + "|" + to);
+    
+        const response = await fetch(url);
+    
+        if (!response.ok)
+            throw new Error("MyMemory HTTP " + response.status);
+    
+        const data = await response.json();
+    
+        const translated =
+            data &&
+            data.responseData &&
+            data.responseData.translatedText;
+    
+        if (typeof translated !== "string" || !translated.trim())
+            throw new Error("Empty MyMemory response");
+    
+        return translated;
+    }
+    
+    async function autoTranslateText(text, from, to) {
+        try {
+            return await autoTranslateGoogle(text, from, to);
+        } catch (_) {
+            return await autoTranslateMyMemory(text, from, to);
+        }
+    }
+    function autoTranslateCacheKey(channelId, messageId) {
+    return String(channelId) + ":" + String(messageId);
+}
+
+function autoTranslateRepaint(channelId, messageId) {
+    if (!dispatcher || typeof dispatcher.dispatch !== "function") return;
+
+    try {
+        dispatcher.dispatch({
+            type: "MESSAGE_UPDATE",
+            message: {
+                id: messageId,
+                channel_id: channelId
+            }
+        });
+    } catch (_) {}
+}
+
+function autoTranslateMessage(message) {
+    if (!features.autoTranslate) return;
+
+    if (!message ||
+        !message.id ||
+        !message.channel_id ||
+        typeof message.content !== "string") {
+        return;
+    }
+
+    const rule = autoTranslateRule(message.channel_id);
+    if (!rule) return;
+
+    // Ignore bots/system messages.
+    if (message.author && message.author.bot) return;
+
+    const original = message.content.trim();
+
+    // Avoid wasting requests on tiny messages.
+    if (original.length < 8) return;
+
+    const key = autoTranslateCacheKey(
+        message.channel_id,
+        message.id
+    );
+
+    if (autoTranslateCache.has(key)) return;
+    if (autoTranslatePending.has(key)) return;
+
+    autoTranslatePending.set(key, true);
+
+    Promise.resolve()
+        .then(() =>
+            autoTranslateText(
+                original,
+                    rule.from,
+                    rule.to
+                )
+            )
+            .then(translated => {
+                if (!translated || translated === original) return;
+    
+                autoTranslateCache.set(key, {
+                    text: translated,
+                    original,
+                    from: rule.from,
+                    to: rule.to
+                });
+    
+                // Keep memory bounded.
+                if (autoTranslateCache.size > 1000) {
+                    autoTranslateCache.delete(
+                        autoTranslateCache.keys().next().value
+                    );
+                }
+    
+                autoTranslateRepaint(
+                    message.channel_id,
+                    message.id
+                );
+            })
+            .catch(() => {})
+            .finally(() => {
+                autoTranslatePending.delete(key);
+            });
+    }
     // A sub-option (piProfile, reviewWarning, pastelAll...) must also wake components that
     // subscribed to its plugin: those pages and badges read several of its settings at once.
     const notify = key => {
