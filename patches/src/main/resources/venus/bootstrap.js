@@ -31,7 +31,7 @@
     if (features.systemEmoji) selectModules([6552]);
     if (features.gestures) selectModules([7414, 11105, 1378, 10905]);
     if (features.hideCall) selectModules([12696]);
-    const revision = "1.8.0";
+    const revision = "1.8.1";
     // Module 120 owns setUpDefaltReactNativeEnvironment in this exact asset.
     // Defer every feature hook until that initializer returns successfully.
     let environmentReady = false;
