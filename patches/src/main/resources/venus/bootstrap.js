@@ -3959,7 +3959,7 @@ function autoTranslateMessage(message) {
         if (features.quickDelete && id === 5205) return replaceValue(exports, "default", hookExport(exports.default, "show", quickConfirm));
         if (features.noDelete && id === 5059) {messageRecords = exports; restoreDeleted();}
         if ((features.noDelete || features.reviewDB || features.platformIndicators || features.hiddenChannels) && id === 1378) {userStore = exports.default; restoreDeleted();}
-        if (features.noDelete && id === 5057) {
+        if ((features.noDelete || features.autoTranslate) && id === 5057) {
             msgStore = exports.default;
             exports = replaceValue(exports,"default",hookExport(hookExport(msgStore,"getMessage",retainedMessage),"getMessages",retainedMessages));
             restoreDeleted(); return exports;
