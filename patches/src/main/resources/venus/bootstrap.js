@@ -181,8 +181,6 @@ function autoTranslateLanguageName(code) {
 }
 
 function autoTranslateRepaint(channelId, messageId) {
-    if (!dispatcher || typeof dispatcher.dispatch !== "function") return;
-
     const cached = autoTranslateCache.get(
         autoTranslateCacheKey(channelId, messageId)
     );
@@ -190,14 +188,9 @@ function autoTranslateRepaint(channelId, messageId) {
     if (!cached) return;
 
     try {
-        dispatcher.dispatch({
-            type: "MESSAGE_UPDATE",
-            message: {
-                id: messageId,
-                channel_id: channelId,
-                content: cached.original
-            }
-        });
+        if (msgStore && typeof msgStore.emitChange === "function") {
+            msgStore.emitChange();
+        }
     } catch (_) {}
 }
 
