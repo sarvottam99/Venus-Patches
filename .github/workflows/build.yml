@@ -48,4 +48,11 @@ jobs:
           name: venus-patches-mpp
           path: patches/build/libs/*.mpp
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 30\n
+        - name: Publish release
+          uses: softprops/action-gh-release@v2
+          with:
+            tag_name: v1.8.1
+            name: Venus Patches v1.8.1
+            files: patches/build/libs/patches-1.8.1.mpp
+            generate_release_notes: true
