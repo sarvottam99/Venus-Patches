@@ -3144,7 +3144,7 @@ function autoTranslateMessage(message) {
     
         if (translated && autoTranslateRule(channelId)) {
             message = Object.assign({}, message, {
-                content: translated.text + "\\n\\n" + translated.original
+                content: translated.text + "\n\n\n" + translated.original
             });
     
             next = Object.assign({}, next, {
