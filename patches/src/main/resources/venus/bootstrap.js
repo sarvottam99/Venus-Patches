@@ -229,37 +229,38 @@ function autoTranslateMessage(message) {
         .then(() =>
             autoTranslateText(
                 original,
-                    rule.from,
-                    rule.to
-                )
+                rule.from,
+                rule.to
             )
-            .then(translated => {
-                if (!translated || translated === original) return;
-    
-                autoTranslateCache.set(key, {
-                    text: translated,
-                    original,
-                    from: rule.from,
-                    to: rule.to
-                });
-    
-                // Keep memory bounded.
-                if (autoTranslateCache.size > 1000) {
-                    autoTranslateCache.delete(
-                        autoTranslateCache.keys().next().value
-                    );
-                }
-    
-                autoTranslateRepaint(
-                    message.channel_id,
-                    message.id
-                );
-            })
-            .catch(() => {})
-            .finally(() => {
-                autoTranslatePending.delete(key);
+        )
+        .then(translated => {
+            if (!translated || translated === original) return;
+
+            autoTranslateCache.set(key, {
+                text: translated,
+                original,
+                from: rule.from,
+                to: rule.to
             });
-    }
+
+            // Keep memory bounded.
+            if (autoTranslateCache.size > 1000) {
+                autoTranslateCache.delete(
+                    autoTranslateCache.keys().next().value
+                );
+            }
+
+            autoTranslateRepaint(
+                message.channel_id,
+                message.id
+            );
+        })
+        .catch(() => {})
+        .finally(() => {
+            autoTranslatePending.delete(key);
+        });
+}
+
     // A sub-option (piProfile, reviewWarning, pastelAll...) must also wake components that
     // subscribed to its plugin: those pages and badges read several of its settings at once.
     const notify = key => {
