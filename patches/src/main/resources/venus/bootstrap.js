@@ -183,12 +183,19 @@ function autoTranslateLanguageName(code) {
 function autoTranslateRepaint(channelId, messageId) {
     if (!dispatcher || typeof dispatcher.dispatch !== "function") return;
 
+    const cached = autoTranslateCache.get(
+        autoTranslateCacheKey(channelId, messageId)
+    );
+
+    if (!cached) return;
+
     try {
         dispatcher.dispatch({
             type: "MESSAGE_UPDATE",
             message: {
                 id: messageId,
-                channel_id: channelId
+                channel_id: channelId,
+                content: cached.original
             }
         });
     } catch (_) {}
@@ -207,13 +214,8 @@ function autoTranslateMessage(message) {
     const rule = autoTranslateRule(message.channel_id);
     if (!rule) return;
 
-    // Ignore bots/system messages.
-    if (message.author && message.author.bot) return;
-
     const original = message.content.trim();
-
-    // Avoid wasting requests on tiny messages.
-    if (original.length < 8) return;
+    if (!original) return;
 
     const key = autoTranslateCacheKey(
         message.channel_id,
@@ -950,129 +952,161 @@ function autoTranslateMessage(message) {
         function AutoTranslateChannelRow({channelId, rule}) {
             useSettings("autoTranslate");
 
+            const ui = reviewUI();
+            const Group = ui.TableRowGroup || RN.View;
+            const Row = ui.TableRow;
+            const Switch = ui.TableSwitchRow;
+            const RadioGroup = inspectedExport(5995, "TableRadioGroup");
+            const RadioRow = inspectedExport(5994, "TableRadioRow");
+
+            const [picker, setPicker] = React.useState(null);
+
             const fromName = autoTranslateLanguageName(rule.from);
             const toName = autoTranslateLanguageName(rule.to);
 
-            const Press = RN.Pressable || RN.TouchableOpacity || RN.View;
+            const colors = ui.colors || {};
+            const textColor = colors.TEXT_DEFAULT || "#dbdee1";
+            const mutedColor = colors.TEXT_MUTED || "#949ba4";
 
-            return el(
-                RN.View,
-                {
-                    style: {
-                        paddingHorizontal: 16,
-                        paddingVertical: 12
-                    }
-                },
+            if (picker && RadioGroup && RadioRow) {
+                const current = picker === "from" ? rule.from : rule.to;
+                const title = picker === "from"
+                    ? "Translate FROM"
+                    : "Translate TO";
 
-                el(
-                    RN.View,
-                    {
-                        style: {
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "space-between"
-                        }
-                    },
+                const selectLanguage = value => {
+                    if (picker === "from")
+                        rule.from = value;
+                    else
+                        rule.to = value;
 
+                    autoTranslateSaveChannels();
+                    setPicker(null);
+                };
+
+                return settingsBody(ui, [
+                    el(
+                        Group,
+                        {
+                            key: "back",
+                            title: title
+                        },
+                        Row
+                            ? el(Row, {
+                                label: "Back",
+                                subLabel: "Return to this channel's translation settings.",
+                                onPress: () => setPicker(null)
+                            })
+                            : el(
+                                RN.Pressable,
+                                {
+                                    onPress: () => setPicker(null),
+                                    style: {
+                                        padding: 16
+                                    }
+                                },
+                                el(
+                                    RN.Text,
+                                    {
+                                        style: {
+                                            color: textColor,
+                                            fontSize: 16,
+                                            fontWeight: "700"
+                                        }
+                                    },
+                                    "← Back"
+                                )
+                            )
+                    ),
+
+                    el(
+                        RadioGroup,
+                        {
+                            key: "languages",
+                            title: title,
+                            value: current,
+                            onChange: selectLanguage
+                        },
+                        AUTO_TRANSLATE_LANGUAGES.map(([value, label]) =>
+                            el(
+                                RadioRow,
+                                {
+                                    key: value,
+                                    value,
+                                    label,
+                                    subLabel: value === current ? "Selected" : undefined
+                                }
+                            )
+                        )
+                    )
+                ]);
+            }
+
+            const rows = [];
+
+            if (Switch) {
+                rows.push(
+                    el(Switch, {
+                        key: "enabled",
+                        label: "Automatic translation",
+                        subLabel: "Translate new messages in this channel automatically.",
+                        value: rule.enabled !== false,
+                        onValueChange: () => autoTranslateToggleChannel(channelId)
+                    })
+                );
+            }
+
+            if (Row) {
+                rows.push(
+                    el(Row, {
+                        key: "from",
+                        label: "Translate FROM",
+                        subLabel: fromName,
+                        onPress: () => setPicker("from")
+                    })
+                );
+
+                rows.push(
+                    el(Row, {
+                        key: "to",
+                        label: "Translate TO",
+                        subLabel: toName,
+                        onPress: () => setPicker("to")
+                    })
+                );
+
+                rows.push(
+                    el(Row, {
+                        key: "remove",
+                        label: "Remove channel",
+                        subLabel: "#" + channelId,
+                        onPress: () => autoTranslateRemoveChannel(channelId)
+                    })
+                );
+            } else {
+                rows.push(
                     el(
                         RN.Text,
                         {
+                            key: "channel",
                             style: {
+                                color: textColor,
                                 fontSize: 16,
-                                fontWeight: "600"
+                                fontWeight: "600",
+                                padding: 16
                             }
                         },
                         "#" + channelId
-                    ),
-
-                    el(
-                        RN.Switch,
-                        {
-                            value: rule.enabled !== false,
-                            onValueChange: () => autoTranslateToggleChannel(channelId)
-                        }
                     )
-                ),
+                );
+            }
 
-                el(
-                    RN.Text,
-                    {
-                        style: {
-                            marginTop: 4,
-                            opacity: 0.7
-                        }
-                    },
-                    fromName + " → " + toName
-                ),
-
-                el(
-                    RN.View,
-                    {
-                        style: {
-                            flexDirection: "row",
-                            marginTop: 10
-                        }
-                    },
-
-                    el(
-                        Press,
-                        {
-                            onPress: () =>
-                                autoTranslatePickLanguage(
-                                    "Translate FROM",
-                                    rule.from,
-                                    value => {
-                                        rule.from = value;
-                                        autoTranslateSaveChannels();
-                                    }
-                                ),
-                            style: {
-                                paddingVertical: 8,
-                                paddingRight: 16
-                            }
-                        },
-                        el(RN.Text, null, "FROM: " + fromName)
-                    ),
-
-                    el(
-                        Press,
-                        {
-                            onPress: () =>
-                                autoTranslatePickLanguage(
-                                    "Translate TO",
-                                    rule.to,
-                                    value => {
-                                        rule.to = value;
-                                        autoTranslateSaveChannels();
-                                    }
-                                ),
-                            style: {
-                                paddingVertical: 8,
-                                paddingHorizontal: 16
-                            }
-                        },
-                        el(RN.Text, null, "TO: " + toName)
-                    )
-                ),
-
-                el(
-                    Press,
-                    {
-                        onPress: () => autoTranslateRemoveChannel(channelId),
-                        style: {
-                            paddingVertical: 8
-                        }
-                    },
-                    el(
-                        RN.Text,
-                        {
-                            style: {
-                                color: "#ed4245"
-                            }
-                        },
-                        "Remove channel"
-                    )
-                )
+            return el(
+                Group,
+                {
+                    title: "#" + channelId
+                },
+                rows
             );
         }
 
@@ -1080,6 +1114,17 @@ function autoTranslateMessage(message) {
             useSettings("autoTranslate");
 
             const [channelId, setChannelId] = React.useState("");
+
+            const ui = reviewUI();
+            const colors = ui.colors || {};
+            const textColor = colors.TEXT_DEFAULT || "#dbdee1";
+            const mutedColor = colors.TEXT_MUTED || "#949ba4";
+            const borderColor = colors.BORDER_SUBTLE || "#4e5058";
+            const backgroundColor =
+                colors.BACKGROUND_MOBILE_PRIMARY ||
+                colors.BACKGROUND_PRIMARY ||
+                colors.BACKGROUND_MOD_NORMAL ||
+                "transparent";
 
             const addChannel = () => {
                 const id = String(channelId || "").trim();
@@ -1117,6 +1162,10 @@ function autoTranslateMessage(message) {
             return el(
                 RN.ScrollView,
                 {
+                    style: {
+                        flex: 1,
+                        backgroundColor
+                    },
                     contentContainerStyle: {
                         paddingBottom: 32
                     }
@@ -1137,7 +1186,7 @@ function autoTranslateMessage(message) {
                         {
                             style: {
                                 fontSize: 14,
-                                opacity: 0.7,
+                                color: mutedColor,
                                 marginBottom: 10
                             }
                         },
@@ -1153,10 +1202,13 @@ function autoTranslateMessage(message) {
                             keyboardType: "numeric",
                             style: {
                                 borderWidth: 1,
+                                borderColor,
                                 borderRadius: 8,
                                 paddingHorizontal: 12,
-                                paddingVertical: 10
-                            }
+                                paddingVertical: 10,
+                                color: textColor
+                            },
+                            placeholderTextColor: mutedColor
                         }
                     ),
 
@@ -1174,7 +1226,8 @@ function autoTranslateMessage(message) {
                             RN.Text,
                             {
                                 style: {
-                                    fontWeight: "700"
+                                    fontWeight: "700",
+                                    color: textColor
                                 }
                             },
                             "Add channel"
