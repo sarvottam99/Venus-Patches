@@ -66,6 +66,7 @@
     const autoTranslateChannels = Object.create(null);
     
     const AUTO_TRANSLATE_LANGUAGES = [
+        ["auto", "Auto / Detect"],
         ["en", "English"],
         ["es", "Spanish"],
         ["fr", "French"],
@@ -93,6 +94,8 @@
         ["ro", "Romanian"],
         ["el", "Greek"],
         ["he", "Hebrew"],
+        ["tl", "Filipino"],
+        ["ms", "Malay"],
         ["id", "Indonesian"],
         ["vi", "Vietnamese"],
         ["th", "Thai"]
@@ -3119,14 +3122,29 @@ function autoTranslateMessage(message) {
         const source = row.message || message;
         const channelId = source.channel_id || source.channelId || message.channelId;
         const id = source.id || message.id;
+
+        // Also translate messages already loaded in the channel, not only new messages.
+        if (features.autoTranslate && channelId && id && typeof source.content === "string") {
+            const existing = autoTranslateCache.get(
+                autoTranslateCacheKey(channelId, id)
+            );
+
+            if (!existing) {
+                autoTranslateMessage(Object.assign({}, source, {
+                    channel_id: String(channelId),
+                    id: String(id)
+                }));
+            }
+        }
+
         if (features.autoTranslate && channelId && id) {
-    const translated = autoTranslateCache.get(
-            autoTranslateCacheKey(channelId, id)
-        );
+            const translated = autoTranslateCache.get(
+                autoTranslateCacheKey(channelId, id)
+            );
     
         if (translated && autoTranslateRule(channelId)) {
             message = Object.assign({}, message, {
-                content: translated.text
+                content: translated.text + "\\n\\n" + translated.original
             });
     
             next = Object.assign({}, next, {
