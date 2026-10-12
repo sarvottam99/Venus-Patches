@@ -1204,7 +1204,7 @@ function autoTranslateMessage(message) {
                         {
                             style: {
                                 fontSize: 14,
-                                color: textColor,
+                                color: "#dbdee1",
                                 marginBottom: 10
                             }
                         },
@@ -1217,6 +1217,11 @@ function autoTranslateMessage(message) {
                             value: channelId,
                             onChangeText: setChannelId,
                             placeholder: "Channel ID or Discord link",
+                            placeholderTextColor: "#949ba4",
+                            style: {
+                                color: "#dbdee1"
+                            },
+                            placeholderTextColor: "#949ba4",
                             style: {
                                 borderWidth: 1,
                                 borderColor,
