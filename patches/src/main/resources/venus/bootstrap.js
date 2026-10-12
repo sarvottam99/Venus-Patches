@@ -1218,19 +1218,17 @@ function autoTranslateMessage(message) {
                             onChangeText: setChannelId,
                             placeholder: "Channel ID or Discord link",
                             placeholderTextColor: "#949ba4",
-                            style: {
-                                color: "#dbdee1"
-                            },
-                            placeholderTextColor: "#949ba4",
+                            selectionColor: "#5865f2",
                             style: {
                                 borderWidth: 1,
-                                borderColor,
+                                borderColor: "#4e5058",
                                 borderRadius: 8,
                                 paddingHorizontal: 12,
                                 paddingVertical: 10,
-                                color: textColor
-                            },
-                            placeholderTextColor: mutedColor
+                                color: "#dbdee1",
+                                backgroundColor: "#2b2d31",
+                                fontSize: 15
+                            }
                         }
                     ),
 
@@ -1241,7 +1239,9 @@ function autoTranslateMessage(message) {
                             style: {
                                 marginTop: 10,
                                 paddingVertical: 12,
-                                alignItems: "center"
+                                alignItems: "center",
+                                backgroundColor: "#5865f2",
+                                borderRadius: 8
                             }
                         },
                         el(
@@ -1249,7 +1249,8 @@ function autoTranslateMessage(message) {
                             {
                                 style: {
                                     fontWeight: "700",
-                                    color: textColor
+                                    color: "#ffffff",
+                                    fontSize: 15
                                 }
                             },
                             "Add channel"
